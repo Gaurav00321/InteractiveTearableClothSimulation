@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Tearable Cloth Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #202020;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="clothCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('clothCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const gravity = 0; // Reduced gravity for minimal downward pull
+        const spacing = 15;
+        const rows = 20;
+        const cols = 30;
+        const damping = 0.98;
+        const tearDistance = 10; // Distance for breaking the cloth connections
+        const repelForce = 0.2; // Force for repelling on hover
+
+        let mouse = { x: canvas.width / 2, y: canvas.height / 2, down: false };
+
+        class Ball {
+            constructor(x, y, fixed = false) {
+                this.x = x;
+                this.y = y;
+                this.prevX = x;
+                this.prevY = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.fixed = fixed;
+            }
+
+            update() {
+                if (!this.fixed) {
+                    const tempX = this.x;
+                    const tempY = this.y;
+
+                    this.vx *= damping;
+                    this.vy *= damping;
+
+                    this.x += this.vx;
+                    this.y += this.vy;
+
+                    this.prevX = tempX;
+                    this.prevY = tempY;
+
+                    // Apply gravity
+                    this.vy += gravity;
+
+                    // Repel from mouse
+                    const dx = this.x - mouse.x;
+                    const dy = this.y - mouse.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < 50) {
+                        const force = (50 - dist) * repelForce;
+                        this.vx += (dx / dist) * force;
+                        this.vy += (dy / dist) * force;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = "#fff";
+                ctx.fill();
+            }
+        }
+
+        class Rope {
+            constructor(ball1, ball2) {
+                this.ball1 = ball1;
+                this.ball2 = ball2;
+                this.length = spacing;
+                this.broken = false;
+            }
+
+            update() {
+                if (this.broken) return;
+
+                const dx = this.ball2.x - this.ball1.x;
+                const dy = this.ball2.y - this.ball1.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Break the rope if mouse is too close
+                if (mouse.down) {
+                    const mx = (this.ball1.x + this.ball2.x) / 2;
+                    const my = (this.ball1.y + this.ball2.y) / 2;
+                    const mdx = mx - mouse.x;
+                    const mdy = my - mouse.y;
+                    const mouseDist = Math.sqrt(mdx * mdx + mdy * mdy);
+
+                    if (mouseDist < tearDistance) {
+                        this.broken = true;
+                        return;
+                    }
+                }
+
+                const diff = this.length - dist;
+                const percent = diff / dist / 2;
+                const offsetX = dx * percent;
+                const offsetY = dy * percent;
+
+                if (!this.ball1.fixed) {
+                    this.ball1.x -= offsetX;
+                    this.ball1.y -= offsetY;
+                }
+
+                if (!this.ball2.fixed) {
+                    this.ball2.x += offsetX;
+                    this.ball2.y += offsetY;
+                }
+            }
+
+            draw() {
+                if (this.broken) return;
+
+                ctx.beginPath();
+                ctx.moveTo(this.ball1.x, this.ball1.y);
+                ctx.lineTo(this.ball2.x, this.ball2.y);
+                ctx.strokeStyle = "#fff";
+                ctx.stroke();
+            }
+        }
+
+        const balls = [];
+        const ropes = [];
+
+        function initializeCloth() {
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const posX = x * spacing + canvas.width / 4;
+                    const posY = y * spacing + canvas.height / 4;
+                    const fixed = y === 0; // Fix the top row
+                    const ball = new Ball(posX, posY, fixed);
+                    balls.push(ball);
+
+                    if (x > 0) {
+                        const leftBall = balls[balls.length - 2];
+                        ropes.push(new Rope(leftBall, ball));
+                    }
+
+                    if (y > 0) {
+                        const aboveBall = balls[x + (y - 1) * cols];
+                        ropes.push(new Rope(aboveBall, ball));
+                    }
+                }
+            }
+        }
+
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ropes.forEach(rope => rope.update());
+            balls.forEach(ball => ball.update());
+            ropes.forEach(rope => rope.draw());
+            balls.forEach(ball => ball.draw());
+
+            requestAnimationFrame(update);
+        }
+
+        function handleMouseMove(e) {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        }
+
+        function handleMouseDown() {
+            mouse.down = true;
+        }
+
+        function handleMouseUp() {
+            mouse.down = false;
+        }
+
+        canvas.addEventListener("mousemove", handleMouseMove);
+        canvas.addEventListener("mousedown", handleMouseDown);
+        canvas.addEventListener("mouseup", handleMouseUp);
+
+        initializeCloth();
+        update();
+    </script>
+</body>
+</html>
