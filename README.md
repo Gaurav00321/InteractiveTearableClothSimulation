@@ -11,9 +11,9 @@ A dynamic 3D cloth simulation built using HTML5 Canvas and JavaScript, featuring
 - **Customizable Parameters:** Adjust grid size, spacing, damping, and more.
 
 ## Getting Started
-1. **Online**: Visit [Interactive-Tearable-cloth](https://gaurav00321.github.io/InteractiveTearableClothSimulation/) to view it live.
-2. For local Setup:
+- **Online**: Visit [Interactive-Tearable-cloth](https://gaurav00321.github.io/InteractiveTearableClothSimulation/) to view it live.
 
+## For local Setup:
 ### Prerequisites
 
 - A modern web browser (Chrome, Firefox, Edge, etc.)
